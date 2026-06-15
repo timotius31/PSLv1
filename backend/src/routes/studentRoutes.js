@@ -30,18 +30,36 @@ studentRoutes.get("/current-class", async (req, res) => {
   const steps = await query(
     `select lesson_steps.*,
             student_progress.completed_at,
-            essay_answers.id as answer_id
+            exists (
+              select 1 from essay_answers
+              where essay_answers.step_id = lesson_steps.id
+                and essay_answers.user_id = $2
+            ) as has_answers
      from lesson_steps
      left join student_progress
        on student_progress.step_id = lesson_steps.id and student_progress.user_id = $2
-     left join essay_answers
-       on essay_answers.step_id = lesson_steps.id and essay_answers.user_id = $2
      where lesson_steps.class_id = $1
      order by lesson_steps.position`,
     [currentClass.id, req.user.sub]
   );
 
-  const decorated = decorateUnlocks(steps.rows);
+  const questions = await query(
+    `select quiz_questions.*
+     from quiz_questions
+     join lesson_steps on lesson_steps.id = quiz_questions.step_id
+     where lesson_steps.class_id = $1
+     order by quiz_questions.step_id, quiz_questions.position`,
+    [currentClass.id]
+  );
+
+  const grouped = questions.rows.reduce((acc, question) => {
+    acc[question.step_id] = [...(acc[question.step_id] || []), question];
+    return acc;
+  }, {});
+
+  const decorated = decorateUnlocks(
+    steps.rows.map((step) => ({ ...step, questions: grouped[step.id] || [] }))
+  );
   res.json({ class: currentClass, steps: decorated, locked: false });
 });
 
@@ -89,21 +107,46 @@ studentRoutes.post("/steps/:id/answer", async (req, res) => {
     return res.status(403).json({ message: "Quiz is locked or unavailable" });
   }
 
-  const { answer } = req.body;
-  if (!answer || answer.trim().length < 2) {
-    return res.status(400).json({ message: "Answer is required" });
-  }
-
-  const saved = await query(
-    `insert into essay_answers (user_id, step_id, answer)
-     values ($1, $2, $3)
-     on conflict (user_id, step_id) do nothing
-     returning *`,
-    [req.user.sub, req.params.id, answer.trim()]
+  const questions = await query(
+    "select * from quiz_questions where step_id = $1 order by position",
+    [req.params.id]
   );
 
-  if (!saved.rows[0]) {
+  const answers = Array.isArray(req.body.answers)
+    ? req.body.answers
+    : [{ questionId: questions.rows[0]?.id, answer: req.body.answer }];
+
+  if (questions.rows.length === 0) {
+    return res.status(400).json({ message: "Quiz has no questions" });
+  }
+
+  const answerMap = new Map(
+    answers.map((item) => [item.questionId, String(item.answer || "").trim()])
+  );
+
+  const missing = questions.rows.find((question) => !answerMap.get(question.id));
+  if (missing) {
+    return res.status(400).json({ message: "All questions must be answered" });
+  }
+
+  const existing = await query(
+    "select id from essay_answers where user_id = $1 and step_id = $2 limit 1",
+    [req.user.sub, req.params.id]
+  );
+
+  if (existing.rows[0]) {
     return res.status(409).json({ message: "Answer already submitted" });
+  }
+
+  const savedAnswers = [];
+  for (const question of questions.rows) {
+    const saved = await query(
+      `insert into essay_answers (user_id, step_id, question_id, answer)
+       values ($1, $2, $3, $4)
+       returning *`,
+      [req.user.sub, req.params.id, question.id, answerMap.get(question.id)]
+    );
+    savedAnswers.push(saved.rows[0]);
   }
 
   await query(
@@ -114,7 +157,7 @@ studentRoutes.post("/steps/:id/answer", async (req, res) => {
     [req.user.sub, req.params.id]
   );
 
-  res.status(201).json(saved.rows[0]);
+  res.status(201).json({ answers: savedAnswers });
 });
 
 studentRoutes.get("/settings", async (_req, res) => {

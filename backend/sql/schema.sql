@@ -66,6 +66,15 @@ create table if not exists lesson_steps (
   unique(class_id, position)
 );
 
+create table if not exists quiz_questions (
+  id uuid primary key default gen_random_uuid(),
+  step_id uuid not null references lesson_steps(id) on delete cascade,
+  position int not null,
+  question text not null,
+  created_at timestamptz not null default now(),
+  unique(step_id, position)
+);
+
 create table if not exists student_progress (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null references users(id) on delete cascade,
@@ -80,13 +89,14 @@ create table if not exists essay_answers (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null references users(id) on delete cascade,
   step_id uuid not null references lesson_steps(id) on delete cascade,
+  question_id uuid references quiz_questions(id) on delete cascade,
   answer text not null,
   score numeric(5,2),
   feedback text,
   graded_by uuid references users(id),
   submitted_at timestamptz not null default now(),
   graded_at timestamptz,
-  unique(user_id, step_id)
+  unique(user_id, question_id)
 );
 
 create table if not exists refresh_tokens (
@@ -108,3 +118,6 @@ create index if not exists idx_lesson_steps_class_position
 
 create index if not exists idx_progress_user_step
   on student_progress(user_id, step_id);
+
+create index if not exists idx_quiz_questions_step_position
+  on quiz_questions(step_id, position);

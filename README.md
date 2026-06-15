@@ -112,6 +112,12 @@ psql postgresql://postgres:root@localhost:5432/lms_dev -f backend/sql/schema.sql
 psql postgresql://postgres:root@localhost:5432/lms_dev -f backend/sql/seed.sql
 ```
 
+If you already have the database and only need to apply later updates:
+
+```bash
+psql postgresql://postgres:root@localhost:5432/lms_dev -f backend/sql/migrations/001_user_management_and_quiz_questions.sql
+```
+
 ### Redis
 
 Redis is optional for local development right now. The backend will start even when Redis is not running.

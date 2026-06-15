@@ -24,11 +24,13 @@ export default function LoginPage() {
     <main className="grid min-h-screen place-items-center bg-[#f7f8f5] px-4">
       <form onSubmit={submit} className="w-full max-w-sm border border-line bg-white p-6 shadow-sm">
         <div className="mb-6 flex items-center gap-3">
-          <div className="grid h-11 w-11 place-items-center rounded bg-ink text-white">
-            <BookOpen size={21} />
-          </div>
+          <img
+            src="/logo.png"
+            alt="Logo"
+            className="h-11 w-11 rounded object-contain"
+          />
           <div>
-            <p className="text-sm text-slate-500">Local LMS</p>
+            <p className="text-sm text-slate-500">My Transformational Journey</p>
             <h1 className="text-xl font-semibold">Sign in</h1>
           </div>
         </div>

@@ -37,6 +37,9 @@ export default function AnswersPage() {
               <div>
                 <p className="font-semibold">{answer.full_name} <span className="text-sm font-normal text-slate-500">({answer.username})</span></p>
                 <p className="text-sm text-slate-600">{answer.class_name} / {answer.step_title}</p>
+                {answer.question && (
+                  <p className="mt-1 text-sm text-slate-700">Question {answer.question_position}: {answer.question}</p>
+                )}
               </div>
               <span className="rounded bg-skyglass px-2 py-1 text-xs text-ink">
                 {answer.score === null ? "Pending" : `Score ${answer.score}`}

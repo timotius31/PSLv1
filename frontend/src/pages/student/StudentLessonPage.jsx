@@ -185,8 +185,9 @@ function VideoStep({ step, settings, onCompleted }) {
 }
 
 function QuizStep({ step, onCompleted }) {
-  const [answer, setAnswer] = useState("");
+  const [answer, setAnswer] = useState({});
   const [error, setError] = useState("");
+  const questions = step.questions?.length ? step.questions : [{ id: "legacy", question: step.quiz_prompt }];
 
   async function submit(event) {
     event.preventDefault();
@@ -194,7 +195,12 @@ function QuizStep({ step, onCompleted }) {
     try {
       await api(`/api/student/steps/${step.id}/answer`, {
         method: "POST",
-        body: JSON.stringify({ answer })
+        body: JSON.stringify({
+          answers: questions.map((question) => ({
+            questionId: question.id,
+            answer: answer[question.id] || ""
+          }))
+        })
       });
       onCompleted();
     } catch (err) {
@@ -205,17 +211,21 @@ function QuizStep({ step, onCompleted }) {
   return (
     <article className="border border-line bg-white p-6">
       <h3 className="text-xl font-semibold">{step.title}</h3>
-      <p className="mt-2 text-slate-700">{step.quiz_prompt}</p>
-      {step.answer_id ? (
+      {step.has_answers ? (
         <p className="mt-6 rounded bg-skyglass px-3 py-2 text-sm">Answer submitted. The next step is unlocked.</p>
       ) : (
         <form onSubmit={submit} className="mt-5 grid gap-3">
-          <textarea
-            className="focus-ring min-h-40 rounded border border-line px-3 py-2"
-            value={answer}
-            onChange={(event) => setAnswer(event.target.value)}
-            required
-          />
+          {questions.map((question, index) => (
+            <label key={question.id} className="grid gap-2">
+              <span className="text-sm font-medium">Question {index + 1}: {question.question}</span>
+              <textarea
+                className="focus-ring min-h-32 rounded border border-line px-3 py-2"
+                value={answer[question.id] || ""}
+                onChange={(event) => setAnswer({ ...answer, [question.id]: event.target.value })}
+                required
+              />
+            </label>
+          ))}
           {error && <p className="rounded bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>}
           <button className="focus-ring rounded bg-ink px-4 py-2 text-white">Submit answer</button>
         </form>

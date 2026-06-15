@@ -51,6 +51,13 @@ union all
 select id, 9, 'Closing Video', 'video'::lesson_step_type, null, 'plant-closing.mp4', '480p', null from plant
 on conflict (class_id, position) do nothing;
 
+insert into quiz_questions (step_id, position, question)
+select lesson_steps.id, 1, lesson_steps.quiz_prompt
+from lesson_steps
+where lesson_steps.step_type = 'quiz'
+  and lesson_steps.quiz_prompt is not null
+on conflict (step_id, position) do nothing;
+
 insert into app_settings (key, value)
 values
   ('allow_forward_seek', 'false'::jsonb),

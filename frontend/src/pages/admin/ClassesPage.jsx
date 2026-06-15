@@ -13,7 +13,8 @@ export default function ClassesPage() {
     content: "",
     videoFileName: "",
     videoQuality: "480p",
-    quizPrompt: ""
+    quizPrompt: "",
+    quizQuestionsText: ""
   });
 
   async function loadClasses() {
@@ -44,8 +45,16 @@ export default function ClassesPage() {
 
   async function createStep(event) {
     event.preventDefault();
-    await api(`/api/admin/classes/${selected.id}/steps`, { method: "POST", body: JSON.stringify(stepForm) });
-    setStepForm({ title: "", stepType: "video", content: "", videoFileName: "", videoQuality: "480p", quizPrompt: "" });
+    const quizQuestions = stepForm.quizQuestionsText
+      .split("\n")
+      .map((question) => question.trim())
+      .filter(Boolean);
+
+    await api(`/api/admin/classes/${selected.id}/steps`, {
+      method: "POST",
+      body: JSON.stringify({ ...stepForm, quizQuestions })
+    });
+    setStepForm({ title: "", stepType: "video", content: "", videoFileName: "", videoQuality: "480p", quizPrompt: "", quizQuestionsText: "" });
     loadSteps(selected.id);
   }
 
@@ -125,7 +134,12 @@ export default function ClassesPage() {
                 </select>
               </label>
               <Textarea label="Text content" value={stepForm.content} onChange={(content) => setStepForm({ ...stepForm, content })} />
-              <Textarea label="Quiz prompt" value={stepForm.quizPrompt} onChange={(quizPrompt) => setStepForm({ ...stepForm, quizPrompt })} />
+              <Textarea
+                label="Quiz questions"
+                value={stepForm.quizQuestionsText}
+                onChange={(quizQuestionsText) => setStepForm({ ...stepForm, quizQuestionsText })}
+                placeholder="Write one essay question per line"
+              />
               <button className="focus-ring rounded bg-ink px-4 py-2 text-white md:col-span-2">Create step</button>
             </form>
           </div>
@@ -139,7 +153,9 @@ export default function ClassesPage() {
                 <span className="text-sm text-slate-500">#{step.position}</span>
                 <div>
                   <p className="font-medium">{step.title}</p>
-                  <p className="text-sm text-slate-600">{step.video_file_name || step.quiz_prompt || step.content || ""}</p>
+                  <p className="text-sm text-slate-600">
+                    {step.video_file_name || step.questions?.map((question) => question.question).join(" / ") || step.content || ""}
+                  </p>
                 </div>
                 <span className="text-sm capitalize text-slate-600">{step.step_type}</span>
               </div>
@@ -160,11 +176,11 @@ function Input({ label, value, onChange }) {
   );
 }
 
-function Textarea({ label, value, onChange }) {
+function Textarea({ label, value, onChange, placeholder = "" }) {
   return (
     <label>
       <span className="mb-1 block text-sm font-medium">{label}</span>
-      <textarea className="focus-ring min-h-24 w-full rounded border border-line px-3 py-2" value={value} onChange={(e) => onChange(e.target.value)} />
+      <textarea className="focus-ring min-h-24 w-full rounded border border-line px-3 py-2" value={value} onChange={(e) => onChange(e.target.value)} placeholder={placeholder} />
     </label>
   );
 }

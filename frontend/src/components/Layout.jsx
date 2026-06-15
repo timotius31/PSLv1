@@ -17,11 +17,13 @@ export default function Layout() {
       <header className="border-b border-line bg-white">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3">
           <div className="flex items-center gap-3">
-            <div className="grid h-10 w-10 place-items-center rounded bg-ink text-white">
-              <BookOpen size={20} />
-            </div>
+            <img
+              src="/logo.png"
+              alt="Logo"
+              className="h-10 w-10 rounded object-contain"
+            />
             <div>
-              <p className="text-sm text-slate-500">Local LMS</p>
+              <p className="text-sm text-slate-500">My Transformational Journey</p>
               <h1 className="text-lg font-semibold text-ink">{user?.fullName}</h1>
             </div>
           </div>
